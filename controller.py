@@ -2,9 +2,11 @@
 
 import sys
 import time
+import fcntl
 
 import logger as Logger
 import bus_types as BusTypes
+import socket_server as SocketServer
 
 try:
 	import uinput
@@ -33,11 +35,19 @@ class Controller:
 			self.keys = Keys.KEYS_JOYSTICK
 		else:
 			self.keys = keys
+		self.socket_server = SocketServer.SocketServer(cb_read = self.on_event)
+
+	def start_tcp_server(self):
+		self.socket_server.start()
+
+	def stop_tcp_server(self):
+		self.socket_server.stop()
+		self.socket_server.close()
+		self.socket_server.join()
 
 	def open_device(self):
 		""" Open the uinput device for this Controller
 		This will exit the program if it fails """
-		Logger.info('Controller is opening the uinput device...')
 		try:
 			self.device = uinput.Device(
 				events = self.keys.values(),
@@ -50,28 +60,47 @@ class Controller:
 		except Exception as err:
 			Logger.fatal('Failed to open a uinput device. Have you loaded the module (sudo modprobe uinput)? Are you running this script as root?', err)
 		Logger.success('Opened uinput device for controller ' + self.name)
-	
+
 	def close_device(self):
 		""" Close the uinput device for this Controller """
 		try:
 			self.device.destroy()
 		except Exception as err:
 			Logger.fatal('Failed to destroy a uinput device.', err)
-		Logger.success('Destroyed uinput device for controller' + self.name)
-	
+		Logger.success('Destroyed uinput device for controller ' + self.name)
+
 	def list_keys(self):
 		""" Print a list of keys supported by this controller. """
 		print 'Controller ' + self.name + ' supports the following keys:'
 		print self.keys.keys()
-		#for k, v in self.keys.items():
-		#	print (k, v)
-	
+
+	def has_key(self, key):
+		""" Check if this Controller has a given key. """
+		return key in self.keys
+
 	def click_key(self, key):
 		""" Emit a click for a key. The key must be a key in Controller.keys. """
-		if key not in self.keys:
-			Logger.warning('Key {0} is not supported by this Controller. Use Controller.list_keys() to get a list of supported keys.'.format(key))
+		if not self.has_key(key):
+			Logger.warning('Key {0} is not supported by this Controller.'.format(key))
 		else:
-			self.device.emit_click(self.keys[key])			
+			self.device.emit_click(self.keys[key])
+
+	def press_key(self, key):
+		""" Press down on a key. The key must be in Controller.keys. """
+		if not self.has_key(key):
+			Logger.warning('Key {0} is not supported by this Controller.'.format(key))
+		else:
+			self.device.emit(self.keys[key], 1)
+
+	def release_key(self, key):
+		""" Release a key. The key must be in Controller.keys. """
+		if not self.has_key(key):
+			Logger.warning('Key {0} is not supported by this Controller.'.format(key))
+		else:
+			self.device.emit(self.keys[key], 0)
+
+	def on_event(self, msg):
+		print 'CONTROLLER RECEIVED MSG: {}'.format(msg)
 
 class Keys:
 	""" This class lists the keys used on controllers """
@@ -90,4 +119,3 @@ class Keys:
 		'UP':		uinput.KEY_UP,
 		'DOWN':		uinput.KEY_DOWN,
 	}
-	
