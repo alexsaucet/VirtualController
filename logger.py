@@ -44,3 +44,6 @@ def success(msg):
 
 def info(msg):
 	print '[ ' + Colors.WHITE_BOLD + 'INFO' + Colors.RESET + ' ] ' + msg
+
+def log(msg):
+	print '[ ' + Colors.BLUE_BOLD + 'INFO' + Colors.RESET + ' ] ' + msg

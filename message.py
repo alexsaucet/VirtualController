@@ -8,35 +8,15 @@ import logger as Logger
     "title": "EVENT",
     "value": "KEY_A",
     "action": "PRESSED",
-    "status": "0"
+    "status": 0
 }
 
-Possible values for "title":
-    - "EVENT": for Controller events. The value will be the name of the event
-    - ""
-
-Possible values for "action":
-    - "PRESSED"
-    - "RELEASED"
-
-Possible values for "status": see class StatusCodes
+Possible values for each field are specified in subclasses of Messages.
 """
 
 class Message:
     """ Represent a message received from, or sent to and socket.
     Transferred messages are formated in JSON """
-
-    class Titles:
-        EVENT = "EVENT"
-
-    class Actions:
-        PRESSED = "PRESSED"
-        RELEASED = "RELEASED"
-
-    class StatusCodes:
-        ERROR = -1
-        OK = 0
-        STOP = 1 # Asks the server to close the connection
 
     def __init__(self, title = None, value = None, action = None, status = None):
         self.title = title
@@ -81,15 +61,15 @@ class Message:
 
     def is_error(self):
         """ Return True if this message contains a status ERROR """
-        return (self.status == self.StatusCodes.ERROR)
+        return (self.status == StatusCodes.ERROR)
 
     def is_ok(self):
         """ Return True if this message contains a status OK """
-        return (self.status == self.StatusCodes.OK)
+        return (self.status == StatusCodes.OK)
 
     def is_stop(self):
         """ Return True if this message contains a status STOP """
-        return (self.status == self.StatusCodes.STOP)
+        return (self.status == StatusCodes.STOP)
 
     def format_json(self):
         if not self.is_valid():
@@ -114,3 +94,15 @@ class Message:
                 Value: {}\n\
                 Action: {}\n\
                 Status: {}\n".format(self.title, self.value, self.action, self.status)
+
+class Titles:
+    EVENT = "EVENT"
+
+class Actions:
+    PRESSED = "PRESSED"
+    RELEASED = "RELEASED"
+
+class StatusCodes:
+    ERROR = -1
+    OK = 0
+    STOP = 1 # Asks the server to close the connection
