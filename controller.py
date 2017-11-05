@@ -12,6 +12,7 @@ will be ignored.
 import sys
 import time
 import fcntl
+from threading import Thread
 
 import logger
 import bus_types
@@ -25,7 +26,7 @@ except ImportError as err:
 
 logger.success('Imported module uinput.')
 
-class Controller:
+class Controller(Thread):
     """ This class handles the uinput device """
     def __init__(
         self,
@@ -36,6 +37,7 @@ class Controller:
         keys = None,
     ):
         """ Set the uinput device settings, and define the list of keys the controller will support """
+        Thread.__init__(self)
         self.name = name
         self.device = None
         self.device_name = device_name
@@ -47,19 +49,27 @@ class Controller:
             self.keys = keys
         self.server_sock = socket_server.SocketServer(cb_read = self.on_client_event)
 
-    def start(self):
+    def run(self):
+        self.__stop = False
         """ Start the Controller. Start the TCP socket server and open the uinput device. """
         logger.info('Starting Controller {}.'.format(self.name))
         self.open_device()
         self.start_tcp_server()
-        self.is_active = True
 
-    def stop(self):
-        """ Stop the Controller. Closes the TCP socket server, and closes the uinput device. """
+        while not self.__stop:
+            time.sleep(1)
+
+        # Stop socket server
         logger.info('Stopping Controller {}...'.format(self.name))
         self.stop_tcp_server()
         self.close_device()
-        self.is_active = False
+
+    def stop(self):
+        """ Stop the Controller. Closes the TCP socket server, and closes the uinput device. """
+        self.__stop = True
+
+    def is_running(self):
+        return not self.__stop
 
     def start_tcp_server(self):
         """ Start the SocketServer thread. """
@@ -138,13 +148,14 @@ class Controller:
         if msg.is_valid():
             if msg.is_ok():
                 if msg.title == message.Titles.EVENT:
-                    in_key = msg.value
+                    # Convert to upper case to ignore case of input
+                    in_key = msg.value.upper()
 
-                    # if in_key == Keys.KEY_STOP_CONTROLLER:
-                    #     logger.info('Received STOP key! Exiting.')
-                    #     self.stop()
-                    #     logger.info('Done stopping controller')
-                    #     return
+                    if in_key == Keys.KEY_STOP_CONTROLLER:
+                        logger.info('Received STOP key! Exiting.')
+                        self.stop()
+                        logger.info('Done stopping controller')
+                        return
 
                     if msg.action == message.Actions.PRESSED:
                         try:
@@ -168,19 +179,63 @@ class Controller:
 class Keys:
     """ This class lists the keys used on controllers """
     KEYS_JOYSTICK = {
-    'A':		uinput.KEY_A,
-    'B':		uinput.KEY_B,
-    'X':		uinput.KEY_X,
-    'Y':		uinput.KEY_Y,
-    'P1':		uinput.KEY_1,
-    'P2':		uinput.KEY_2,
-    'START':	uinput.KEY_ENTER,
-    'SELECT':	uinput.KEY_SPACE,
-    'COIN':		uinput.KEY_C,
-    'LEFT':		uinput.KEY_LEFT,
-    'RIGHT':	uinput.KEY_RIGHT,
-    'UP':		uinput.KEY_UP,
-    'DOWN':		uinput.KEY_DOWN,
+        'A': uinput.KEY_A,
+        'Z': uinput.KEY_B,
+        'S': uinput.KEY_X,
+        'D': uinput.KEY_Y,
+        '1': uinput.KEY_1, # Player 1
+        '2': uinput.KEY_2, # Player 2
+        'KEY.ENTER': uinput.KEY_ENTER, # start
+        'KEY.SPACE':uinput.KEY_SPACE, # select
+        'C': uinput.KEY_C, # insert coin
+        'KEY.LEFT': uinput.KEY_LEFT, # left
+        'KEY.RIGHT': uinput.KEY_RIGHT, # right
+        'KEY.UP': uinput.KEY_UP, # up
+        'KEY.DOWN': uinput.KEY_DOWN, # down
+        'KEY.F4': uinput.KEY_F4, # F4
     }
 
-    KEY_STOP_CONTROLLER = 'Key.esc'
+    KEYS_TEST_2 = {
+        'A': uinput.BTN_A,
+        'Z': uinput.BTN_B,
+        'S': uinput.BTN_X,
+        'D': uinput.BTN_Y,
+        'KEY.SHIFT': uinput.BTN_TL,
+        'KEY.CAPS_LOCK': uinput.BTN_TL2,
+        'KEY.SHIFT_R': uinput.BTN_TR,
+        '`': uinput.BTN_TR2,
+        '1': uinput.BTN_1, # Player 1
+        '2': uinput.BTN_2, # Player 2
+        'KEY.ENTER': uinput.BTN_START, # start
+        'KEY.SPACE':uinput.BTN_SELECT, # select
+        'M': uinput.BTN_MODE,
+        'KEY.CMD': uinput.BTN_THUMBL,
+        'KEY.CMD_R': uinput.BTN_THUMBR,
+        'C': uinput.BTN_C, # insert coin
+        'Z': uinput.BTN_Z, # Dont know
+        'KEY.LEFT': uinput.BTN_DPAD_LEFT, # left
+        'KEY.RIGHT': uinput.BTN_DPAD_RIGHT, # right
+        'KEY.UP': uinput.BTN_DPAD_UP, # up
+        'KEY.DOWN': uinput.BTN_DPAD_DOWN, # down
+        'KEY.F4': uinput.KEY_F4, # F4
+    }
+
+    KEYS_TEST = {
+        'A': uinput.BTN_A,
+        'Z': uinput.BTN_B,
+        'C': uinput.BTN_C,
+        'S': uinput.BTN_X,
+        'D': uinput.BTN_Y,
+        'W': uinput.BTN_Z,
+        'KEY.SHIFT':        uinput.BTN_TL,  # Trigger Left
+        'KEY.SHIFT_R':      uinput.BTN_TR,  # Trigger Right
+        'KEY.CAPS_LOCK':    uinput.BTN_TL2, # Trigger Left 2
+        '`':            uinput.BTN_TR2,     # Trigger Right 2
+        'KEY.CMD':      uinput.BTN_SELECT,  # Select
+        'KEY.CMD_R':    uinput.BTN_START,   # Start
+        'M':            uinput.BTN_MODE,    # Mode
+        'KEY.ALT':      uinput.BTN_THUMBL,  # Thumb Left
+        'KEY.ALT_R':    uinput.BTN_THUMBR,  # Thumb Right
+    }
+
+    KEY_STOP_CONTROLLER = 'KEY.ESC'

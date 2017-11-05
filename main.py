@@ -4,21 +4,14 @@ import time
 import controller as Controller
 import socket_server as SocketServer
 
-import threading
-
 def main():
 	controller = Controller.Controller(name = 'Player 1')
 
 	controller.start()
 
-	controller.list_keys()
+	controller.join()
 
-	time.sleep(15)
-
-	if controller.is_active:
-		controller.stop()
-	else:
-		print 'Controller is not active, not closing it.'
+	print 'Exiting'
 
 
 if __name__ == "__main__":
