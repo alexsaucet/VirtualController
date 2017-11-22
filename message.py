@@ -97,10 +97,14 @@ class Message:
 
 class Titles:
     EVENT = "EVENT"
+    CONTROL = "CONTROL"
 
 class Actions:
     PRESSED = "PRESSED"
     RELEASED = "RELEASED"
+    RELOAD_DEVICE = "RELOAD_DEVICE"
+    STOP_SERVER = "STOP_SERVER"
+    STOP_CONTROLLER = "STOP_CONTROLLER"
 
 class StatusCodes:
     ERROR = -1

@@ -89,8 +89,12 @@ class SocketServerThread(Thread):
                     else:
                         msg = message.Message()
                         msg.read_message(read_data)
-                        if  msg.is_valid():
-                            self.cb_read(msg)
+                        if msg.is_valid():
+                            if msg.title == message.Titles.CONTROL and msg.action == message.Actions.STOP_CONTROLLER:
+                                logger.info('Stopping this controller {}'.format(self.client_addr))
+                                self.stop()
+                            else:
+                                self.cb_read(msg)
 
                         else:
                             logger.warning("Received an invalid message from {}: {}".format(self.client_addr, read_data))

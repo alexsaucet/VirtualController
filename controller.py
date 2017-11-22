@@ -32,7 +32,7 @@ class Controller(Thread):
         self,
         name = 'Controller',
         device_name = 'virtual_controller',
-        device_bus_type = bus_types.BusTypes.VIRTUAL,
+        device_bus_type = bus_types.BusTypes.USB,
         device_version = 1,
         keys = None,
     ):
@@ -47,7 +47,7 @@ class Controller(Thread):
             self.keys = Keys.KEYS_JOYSTICK
         else:
             self.keys = keys
-        self.server_sock = socket_server.SocketServer(cb_read = self.on_client_event)
+        self.server_sock = socket_server.SocketServer(cb_read = self.on_client_event, port = 2011)
 
     def run(self):
         self.__stop = False
@@ -147,15 +147,20 @@ class Controller(Thread):
         logger.info('Controller received message: {}'.format(msg.format_json()))
         if msg.is_valid():
             if msg.is_ok():
-                if msg.title == message.Titles.EVENT:
+                if msg.title == message.Titles.CONTROL:
+                    if msg.action == message.Actions.RELOAD_DEVICE:
+                        logger.info('Reloading device...')
+                        self.close_device()
+                        self.open_device()
+                        logger.info('Device reloaded!')
+                    elif msg.action == message.Actions.STOP_SERVER:
+                        logger.info('Stopping server...')
+                        self.stop()
+                        return
+
+                elif msg.title == message.Titles.EVENT:
                     # Convert to upper case to ignore case of input
                     in_key = msg.value.upper()
-
-                    if in_key == Keys.KEY_STOP_CONTROLLER:
-                        logger.info('Received STOP key! Exiting.')
-                        self.stop()
-                        logger.info('Done stopping controller')
-                        return
 
                     if msg.action == message.Actions.PRESSED:
                         try:
@@ -169,6 +174,7 @@ class Controller(Thread):
                             logger.warning(str(e))
                     else:
                         logger.warning('Invalid action: {}. Ignoring message.'.format(msg.action))
+
                 else:
                     logger.info('Message not supported: {}. Ignoring it.'.format(msg.title))
             else:
@@ -193,6 +199,8 @@ class Keys:
         'KEY.UP': uinput.KEY_UP, # up
         'KEY.DOWN': uinput.KEY_DOWN, # down
         'KEY.F4': uinput.KEY_F4, # F4
+        'KEY.SHIFT': uinput.KEY_LEFTSHIFT,  # Left shoulder to load a save
+        'KEY.SHIFT_R': uinput.KEY_RIGHTSHIFT,  # Right shoulder to save game
     }
 
     KEYS_TEST_2 = {
@@ -238,4 +246,4 @@ class Keys:
         'KEY.ALT_R':    uinput.BTN_THUMBR,  # Thumb Right
     }
 
-    KEY_STOP_CONTROLLER = 'KEY.ESC'
+    #KEY_STOP_CONTROLLER = 'KEY.ESC'
