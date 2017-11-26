@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import json
-import logger as Logger
+import VCLogger
 
 """ JSON format for ALL messages:
 {
@@ -13,6 +13,8 @@ import logger as Logger
 
 Possible values for each field are specified in subclasses of Messages.
 """
+
+logger = VCLogger.Logger(VCLogger.Level.ALL)
 
 class Message:
     """ Represent a message received from, or sent to and socket.
@@ -29,20 +31,20 @@ class Message:
         try:
             json_parsed = json.loads(msg)
         except ValueError as err:
-            Logger.warning('Message is not in JSON format.', err)
+            logger.warning('Message is not in JSON format.', err)
             return
 
         if json_parsed['title'] is None:
-            Logger.warning("This message doesn't contain a title: \n{}".format(msg))
+            logger.warning("This message doesn't contain a title: \n{}".format(msg))
             return
         if json_parsed['value'] is None:
-            Logger.warning("This message doesn't contain a value: \n{}".format(msg))
+            logger.warning("This message doesn't contain a value: \n{}".format(msg))
             return
         if json_parsed['action'] is None:
-            Logger.warning("This message doesn't contain an action: \n{}".format(msg))
+            logger.warning("This message doesn't contain an action: \n{}".format(msg))
             return
         if json_parsed['status'] is None:
-            Logger.warning("This message doesn't contain a status: \n{}".format(msg))
+            logger.warning("This message doesn't contain a status: \n{}".format(msg))
             return
 
         self.title = json_parsed['title']
@@ -72,8 +74,9 @@ class Message:
         return (self.status == StatusCodes.STOP)
 
     def format_json(self):
+        """ Stringify this json message """
         if not self.is_valid():
-            print 'not valid'
+            logger.warning('Attempting to format an invalid message:')
             return ''
         data = {}
         data['title'] = self.title
@@ -81,13 +84,6 @@ class Message:
         data['action'] = self.action
         data['status'] = self.status
         return json.dumps(data)
-
-    def print_out(self):
-        """ Print out the content of this message. """
-        print "Title: {}".format(self.title)
-        print "Value: {}".format(self.value)
-        print "Action: {}".format(self.action)
-        print "Status: {}".format(self.status)
 
     def __str__(self):
         return "Title: {}\n\

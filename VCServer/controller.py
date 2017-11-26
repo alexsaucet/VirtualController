@@ -3,7 +3,7 @@
 """
 Virtual controller based on python-uinput
 (https://github.com/tuomasjjrasanen/python-uinput)
-A TCP Client can send input keyboard events, causing this Controller to emit
+A VCClient can send keyboard events, causing this Controller to emit
 the events on the uinput driver.
 Input messages must be in the JSON format specified in message.py; other messages
 will be ignored.
@@ -14,16 +14,21 @@ import time
 import fcntl
 from threading import Thread
 
-import logger
+from os import path
+sys.path.append(path.dirname(path.dirname(path.abspath(__file__))))
+
+from VCCommon import message
+from VCCommon import VCLogger
+
 import bus_types
 import socket_server
-import message
 
 try:
     import uinput
 except ImportError as err:
     logger.fatal('Failed to import uinput. Are you sure it is installed?', err)
 
+logger = VCLogger.Logger(VCLogger.Level.ALL)
 logger.success('Imported module uinput.')
 
 class Controller(Thread):
@@ -120,25 +125,23 @@ class Controller(Thread):
             logger.warning('Key {0} is not supported by this Controller.'.format(key))
         else:
             self.device.emit_click(self.keys[key])
-            logger.log('Sending uinput event: click key {} ({}).'.format(key, sekf.keys[key]))
+            logger.event_info('Sending uinput event: click key {} ({}).'.format(key, sekf.keys[key]))
 
     def press_key(self, key):
         """ Press down on a key. The key must be defined in Controller.keys. """
         if not self.has_key(key):
-            #Logger.warning('Key {0} is not supported by this Controller.'.format(key))
             raise ValueError('Key {0} is not supported by this Controller.'.format(key))
         else:
             self.device.emit(self.keys[key], 1)
-            logger.log('Sending uinput event: press key {} ({}).'.format(key, self.keys[key]))
+            logger.event_info('Sending uinput event: press key {} ({}).'.format(key, self.keys[key]))
 
     def release_key(self, key):
         """ Release a key. The key must be defined in Controller.keys. """
         if not self.has_key(key):
-            #Logger.warning('Key {0} is not supported by this Controller.'.format(key))
             raise ValueError('Key {0} is not supported by this Controller.'.format(key))
         else:
             self.device.emit(self.keys[key], 0)
-            logger.log('Sending uinput event: release key {} ({}).'.format(key, self.keys[key]))
+            logger.event_info('Sending uinput event: release key {} ({}).'.format(key, self.keys[key]))
 
     def on_client_event(self, msg):
         """ Callback function called by the SocketServer when it receives a valid

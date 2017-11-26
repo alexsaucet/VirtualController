@@ -5,8 +5,13 @@ import select
 import sys
 from threading import Thread
 
-import logger
-import message
+from os import path
+sys.path.append(path.dirname(path.dirname(path.abspath(__file__))))
+
+from VCCommon import message
+from VCCommon import VCLogger
+
+logger = VCLogger.Logger(VCLogger.Level.ALL)
 
 class SocketServer(Thread):
     """ Simple socket server. Data must be in JSON format. """
@@ -48,7 +53,6 @@ class SocketServer(Thread):
                 client_sock, client_addr = self.sock.accept()
             except socket.timeout:
                 client_sock = None
-                #logger.info('Timeout waiting for accept(), this is normal')
 
             if client_sock:
                 client_thr = SocketServerThread(client_sock, client_addr, self.cb_read)
@@ -67,7 +71,7 @@ class SocketServerThread(Thread):
         self.cb_read = cb_read
 
     def run(self):
-        logger.info("SocketServerThread starting with client {}".format(self.client_addr))
+        logger.connection_info("SocketServerThread starting with client {}".format(self.client_addr))
         self.__stop = False
         while not self.__stop:
             if self.client_sock:
@@ -84,14 +88,14 @@ class SocketServerThread(Thread):
 
                     # Check if socket has been closed
                     if len(read_data) == 0:
-                        logger.info('{} closed the socket.'.format(self.client_addr))
+                        logger.connection_info('{} closed the socket.'.format(self.client_addr))
                         self.stop()
                     else:
                         msg = message.Message()
                         msg.read_message(read_data)
                         if msg.is_valid():
                             if msg.title == message.Titles.CONTROL and msg.action == message.Actions.STOP_CONTROLLER:
-                                logger.info('Stopping this controller {}'.format(self.client_addr))
+                                logger.connection_info('Stopping this controller {}'.format(self.client_addr))
                                 self.stop()
                             else:
                                 self.cb_read(msg)
@@ -99,7 +103,7 @@ class SocketServerThread(Thread):
                         else:
                             logger.warning("Received an invalid message from {}: {}".format(self.client_addr, read_data))
             else:
-                logger.warning("No client is connected, SocketServer can't receive data")
+                logger.connection_info("No client is connected, SocketServer can't receive data")
                 self.stop()
 
         self.close()
@@ -110,5 +114,5 @@ class SocketServerThread(Thread):
     def close(self):
         """ Close connection with the client socket. """
         if self.client_sock:
-            logger.info("Closing connection with {}".format(self.client_addr))
+            logger.connection_info("Closing connection with {}".format(self.client_addr))
             self.client_sock.close()
